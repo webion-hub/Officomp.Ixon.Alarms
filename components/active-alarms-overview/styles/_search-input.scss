@@ -1,0 +1,28 @@
+.search-input-container {
+  display: flex;
+  flex-direction: row;
+  height: 40px;
+  margin-left: 8px;
+  border-radius: 8px;
+  background-color: rgb(0 0 0 / 4%);
+
+  .search-input {
+    background-color: transparent;
+    height: 32px;
+    width: 140px;
+    padding: 4px 8px 4px 0;
+    margin: 0;
+    border: none;
+    outline: none;
+    line-height: 24px;
+    font-size: 14px;
+    color: var(--body-color);
+    overflow: hidden;
+  }
+}
+
+.search-input-prefix {
+  width: 24px;
+  height: 24px;
+  padding: 8px;
+}
