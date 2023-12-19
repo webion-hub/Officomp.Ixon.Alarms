@@ -1,5 +1,14 @@
 {
   "$schema": "./node_modules/@ixon-cdk/core/config/schema.json",
   "prefix": "app",
-  "components": {}
+  "components": {
+    "active-alarms-overview": {
+      "runner": {
+        "build": {
+          "builder": "@ixon-cdk/svelte-builder:browser",
+          "input": "active-alarms-overview.svelte"
+        }
+      }
+    }
+  }
 }
