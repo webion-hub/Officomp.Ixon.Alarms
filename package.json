@@ -7,6 +7,7 @@
     "@ixon-cdk/runner": "^1.4.0-next.0",
     "@ixon-cdk/simulator": "^1.4.0-next.0",
     "@ixon-cdk/svelte-builder": "^1.4.0-next.0",
+    "@ixon-cdk/types": "^1.4.0-next.0",
     "@types/luxon": "^3.0.0",
     "typescript": "~5.1.6"
   },

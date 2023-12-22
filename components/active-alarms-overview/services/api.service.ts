@@ -70,7 +70,7 @@ export class ApiService {
     }
     const url = this.context.getApiUrl('AgentDataAlarmList', {
       agentId,
-      fields: 'audience,name,publicId,severity',
+      fields: 'audience,name,publicId,severity,source',
       'page-size': '4000',
       ...(moreAfter ? { 'page-after': moreAfter } : {}),
     });

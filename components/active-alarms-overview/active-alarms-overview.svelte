@@ -20,20 +20,22 @@
   $: isNarrow = tableWidth < 320;
 
   $: visibleAlarms = search
-    ? alarms.filter(alarm => {
-        const activeOcc = alarm.activeOccurrence;
-        const activeSince = activeOcc?.occurredOn
-          ? formatDateTime(activeOcc.occurredOn)
-          : undefined;
-        const alarmData = [alarm.agent.name, alarm.name, alarm.severity];
-        if (activeSince) {
-          alarmData.push(activeSince);
-        }
-        return alarmData.find(x =>
-          x?.toLowerCase().includes(search.toLowerCase()),
-        );
-      })
-    : alarms;
+    ? alarms
+        ?.filter(alarm => alarm.source)
+        .filter(alarm => {
+          const activeOcc = alarm.activeOccurrence;
+          const activeSince = activeOcc?.occurredOn
+            ? formatDateTime(activeOcc.occurredOn)
+            : undefined;
+          const alarmData = [alarm.agent.name, alarm.name, alarm.severity];
+          if (activeSince) {
+            alarmData.push(activeSince);
+          }
+          return alarmData.find(x =>
+            x?.toLowerCase().includes(search.toLowerCase()),
+          );
+        })
+    : alarms?.filter(alarm => alarm.source);
 
   onMount(async () => {
     alarmsManager = new AlarmsManager(context);
@@ -61,7 +63,7 @@
     doAutoRefresh = !doAutoRefresh;
 
     if (doAutoRefresh) {
-      autoRefreshInterval = setInterval(function () {
+      autoRefreshInterval = window.setInterval(function () {
         getCurrentActiveAlarms();
       }, 30000);
     } else {

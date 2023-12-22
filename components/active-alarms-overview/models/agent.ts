@@ -19,6 +19,7 @@ export class Agent {
           agent: { name, publicId } as IAgent,
           severity: a.severity ?? '',
           audience: a.audience?.publicId ?? '',
+          source: a.source ?? null,
         };
       }) ?? [];
   }
