@@ -6,6 +6,7 @@ export interface Alarm {
   activeOccurrence: AgentDataAlarmOccurrence | null;
   agent: Agent;
   severity: string;
+  source: ResLink | null;
   audience: string;
 };
 
