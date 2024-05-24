@@ -1,7 +1,8 @@
+import { compact } from 'lodash-es';
 import { ApiService } from './api.service';
-import { Agent } from '../models/agent';
+import { AgentOrAsset } from '../models/agent';
 import { RbacManager } from './rbac-manager';
-import type { AgentDataAlarm, AgentDataAlarmOccurrence, ComponentContext } from '@ixon-cdk/types';
+import type { AgentDataAlarm, AgentDataAlarmOccurrence, ComponentContext, MyUser } from '@ixon-cdk/types';
 import type { Alarm, MyUserMembership } from '../types';
 
 type AlarmsPerAgent = {
@@ -17,21 +18,30 @@ type AlarmOccurrencesPerAgent = {
 export class AlarmsManager {
   apiService: ApiService;
   rbacManager: RbacManager;
-  agents: Agent[] = [];
 
   constructor(context: ComponentContext) {
     this.apiService = new ApiService(context);
     this.rbacManager = new RbacManager(context);
   }
 
-  public async getAlarms(): Promise<Alarm[]> {
-    const myUserMemberships = await this.rbacManager.getMyUserMemberships();
+  public async getAlarms(myUser: MyUser): Promise<Alarm[]> {
+    const myUserMemberships = await this.rbacManager.getMyUserMemberships(myUser);
 
-    const apiAgents = await this.apiService.getAgents();
-    if (!apiAgents) {
+    const apiAgentsAndAssets = await this.apiService.getAgentsAndAssets();
+    if (!apiAgentsAndAssets) {
       return [];
     }
-    const agentIds = apiAgents.map(a => a.publicId);
+    const agentIds: string[] = compact(
+      apiAgentsAndAssets.map(a => {
+        if ('agent' in a && a.agent?.publicId) {
+          return a.agent.publicId;
+        }
+        if (a.publicId) {
+          return a.publicId;
+        }
+        return null;
+      }),
+    );
 
     // chunk to avoid api timeouts
     const chunkedAgentIds = this.chunk(agentIds, 100);
@@ -39,32 +49,34 @@ export class AlarmsManager {
     const alarmsPerAgent = await this.getAlarmsPerAgent(chunkedAgentIds);
     const alarmOccurrencesPerAgent = await this.getAlarmOccurrencesPerAgent(chunkedAgentIds, alarmsPerAgent);
 
-    const agents = apiAgents.map(a => {
-      return new Agent(
+    const agentsOrAssets = apiAgentsAndAssets.map(a => {
+      const agentId = 'agent' in a && a.agent?.publicId ? a.agent.publicId : a.publicId;
+      return new AgentOrAsset(
         a.publicId,
-        a.name,
-        alarmsPerAgent.find(b => b.agentId === a.publicId)?.alarms,
-        alarmOccurrencesPerAgent.find(b => b.agentId === a.publicId)?.alarmOccurrences,
+        a.name ?? undefined,
+        alarmsPerAgent.find(b => b.agentId === agentId)?.alarms,
+        alarmOccurrencesPerAgent.find(b => b.agentId === agentId)?.alarmOccurrences,
       );
     });
-    const alarms = agents.map(a => a.alarms).flat();
+    const alarms = agentsOrAssets.map(a => a.alarms).flat();
 
     return this.filterAlarmsOnAudiences(alarms, myUserMemberships);
   }
 
-  public async getActiveAlarms(): Promise<Alarm[]> {
-    return this.getAlarms().then(alarms => alarms.filter(alarm => !!alarm.activeOccurrence));
+  public getActiveAlarms(myUser: MyUser): Promise<Alarm[]> {
+    return this.getAlarms(myUser).then(alarms => alarms.filter(alarm => !!alarm.activeOccurrence));
   }
 
   private filterAlarmsOnAudiences(alarms: Alarm[], myUserMemberships: MyUserMembership[]): Alarm[] {
     return alarms.filter(alarm => {
-      const agentId = alarm.agent.publicId;
+      const agentId = alarm.agentOrAsset.publicId;
       const audienceId = alarm.audience;
       const relevantUserMemberships = myUserMemberships.filter(membership => {
         const sameAudience = membership?.role?.audiences?.find(a => a.publicId === audienceId);
         const sameAgent =
           membership.agents?.find(a => a?.publicId === agentId) || membership.group?.agent?.publicId === agentId;
-        return sameAgent && sameAudience;
+        const sameAsset = membership.assets?.find(a => a?.publicId === agentId);
+        return (sameAgent && sameAudience) || (sameAsset && sameAudience);
       });
       return relevantUserMemberships.length > 0;
     });

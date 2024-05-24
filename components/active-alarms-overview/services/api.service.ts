@@ -3,11 +3,14 @@ import type {
   AgentDataAlarm,
   AgentDataAlarmOccurrence,
   AgentMembership,
+  Asset,
+  AssetMembership,
   ComponentContext,
   Group,
   IxApiResponse,
   MyUser,
   Role,
+  User,
   UserMembership,
 } from '@ixon-cdk/types';
 
@@ -26,8 +29,11 @@ export class ApiService {
     };
   }
 
-  async getAgents(): Promise<Agent[]> {
-    return await this._getAgents();
+  async getAgentsAndAssets(): Promise<(Agent | Asset)[]> {
+    const agents = await this._getAgents();
+    const assets = await this._getAssets();
+    const filteredAgents = agents.filter(agent => !assets.some(asset => asset.agent?.publicId === agent.publicId));
+    return [...filteredAgents, ...assets];
   }
 
   private async _getAgents(agents: Agent[] = [], moreAfter?: string | null): Promise<Agent[]> {
@@ -84,6 +90,31 @@ export class ApiService {
       });
     if (response) {
       return await this._getAlarms(agentId, [...alarms, ...response.data], response.moreAfter);
+    }
+    return [];
+  }
+
+  private async _getAssets(assets: Asset[] = [], moreAfter?: string | null): Promise<Asset[]> {
+    if (moreAfter === null) {
+      // end recursion chain
+      return assets;
+    }
+    const url = this.context.getApiUrl('AssetList', {
+      fields: 'name,publicId,agent.publicId',
+      filters: 'isnotnull(agent)',
+      'page-size': '4000',
+      ...(moreAfter ? { 'page-after': moreAfter } : {}),
+    });
+    const response: IxApiResponse<Asset[]> = await fetch(url, {
+      headers: this.headers,
+      method: 'GET',
+    })
+      .then(res => res.json())
+      .catch(error => {
+        console.error('Error:', error);
+      });
+    if (response) {
+      return await this._getAssets([...assets, ...response.data], response.moreAfter);
     }
     return [];
   }
@@ -213,24 +244,24 @@ export class ApiService {
     return [];
   }
 
-  async getUserMemberships(): Promise<UserMembership[]> {
-    return await this._getUserMemberships();
+  async getAssetMemberships(): Promise<AssetMembership[]> {
+    return await this._getAssetMemberships();
   }
 
-  private async _getUserMemberships(
-    memberships: UserMembership[] = [],
+  private async _getAssetMemberships(
+    memberships: AgentMembership[] = [],
     moreAfter?: string | null,
-  ): Promise<UserMembership[]> {
+  ): Promise<AgentMembership[]> {
     if (moreAfter === null) {
       // end recursion chain
       return memberships;
     }
-    const url = this.context.getApiUrl('UserMembershipList', {
-      fields: '*,group,role,user',
+    const url = this.context.getApiUrl('AssetMembershipList', {
+      fields: '*,asset.*,group.*',
       'page-size': '4000',
       ...(moreAfter ? { 'page-after': moreAfter } : {}),
     });
-    const response: IxApiResponse<UserMembership[]> = await fetch(url, {
+    const response: IxApiResponse<AgentMembership[]> = await fetch(url, {
       headers: this.headers,
       method: 'GET',
     })
@@ -239,18 +270,21 @@ export class ApiService {
         console.error('Error:', error);
       });
     if (response) {
-      return await this._getUserMemberships([...memberships, ...response.data], response.moreAfter);
+      return await this._getAssetMemberships([...memberships, ...response.data], response.moreAfter);
     }
     return [];
   }
 
-  async getMyUser(): Promise<MyUser> {
-    const url = this.context.getApiUrl('MyUser', { fields: 'publicId' });
-    const response: IxApiResponse<MyUser> = await fetch(url, { headers: this.headers, method: 'GET' })
+  async getUserMembershipsOfMyUser(myUser: MyUser): Promise<UserMembership[]> {
+    const url = this.context.getApiUrl('User', {
+      publicId: myUser.publicId,
+      fields: 'publicId,memberships.group,memberships.role',
+    });
+    const response: IxApiResponse<User> = await fetch(url, { headers: this.headers, method: 'GET' })
       .then(res => res.json())
       .catch(error => {
         console.error('Error:', error);
       });
-    return response?.data ?? ({} as MyUser);
+    return response.data?.memberships ?? ([] as UserMembership[]);
   }
 }

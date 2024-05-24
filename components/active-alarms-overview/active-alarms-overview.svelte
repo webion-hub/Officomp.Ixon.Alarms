@@ -1,15 +1,18 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { DateTime } from 'luxon';
-  import type { ComponentContext } from '@ixon-cdk/types';
+  import type { ComponentContext, MyUser, ResourceDataClient } from '@ixon-cdk/types';
   import { AlarmsManager } from './services/alarms-manager';
   import type { Alarm } from './types';
+  import { result } from 'lodash';
 
   export let context: ComponentContext;
 
   let alarmsManager: AlarmsManager;
   let alarms: Alarm[];
+  let client: ResourceDataClient;
   let loading = true;
+  let myUser: MyUser | null;
   let tableWidth = 0;
   let tableScrollTop = 0;
   let doAutoRefresh = false;
@@ -27,7 +30,7 @@
           const activeSince = activeOcc?.occurredOn
             ? formatDateTime(activeOcc.occurredOn)
             : undefined;
-          const alarmData = [alarm.agent.name, alarm.name, alarm.severity];
+          const alarmData = [alarm.agentOrAsset.name, alarm.name, alarm.severity];
           if (activeSince) {
             alarmData.push(activeSince);
           }
@@ -39,6 +42,7 @@
 
   onMount(async () => {
     alarmsManager = new AlarmsManager(context);
+    client = context.createResourceDataClient();
     translations = context.translate(
       [
         '__TEXT__.NO_MATCHING_RESULTS',
@@ -52,7 +56,14 @@
       undefined,
       { source: 'global' },
     );
-    getCurrentActiveAlarms();
+    client.query(
+      { selector: 'MyUser', fields: ['publicId'] },
+      ([result]) => {
+        myUser = result.data;
+        getCurrentActiveAlarms();
+      },
+    );
+    return () => client.destroy();
   });
 
   function toggleRefresh(): void {
@@ -105,12 +116,14 @@
   }
 
   async function getCurrentActiveAlarms(): Promise<void> {
-    loading = true;
-    alarms = (await alarmsManager.getActiveAlarms()).sort((a, b) => {
-      const delta = _getSortingWeight(b) - _getSortingWeight(a);
-      return delta === 0 ? a.name.localeCompare(b.name) : delta;
-    });
-    loading = false;
+    if(!!myUser) {
+      loading = true;
+      alarms = (await alarmsManager.getActiveAlarms(myUser)).sort((a, b) => {
+        const delta = _getSortingWeight(b) - _getSortingWeight(a);
+        return delta === 0 ? a.name.localeCompare(b.name) : delta;
+      });
+      loading = false;
+    }
   }
 
   function _getSortingWeight(alarm: Alarm): number {
@@ -211,9 +224,9 @@
               {#each visibleAlarms || [] as alarm}
                 <tr
                   data-testid="active-alarms-overview-table-row"
-                  on:click={() => goToAgent(alarm.agent.publicId)}
+                  on:click={() => goToAgent(alarm.agentOrAsset.publicId)}
                 >
-                  <td>{alarm.agent.name}</td>
+                  <td>{alarm.agentOrAsset.name}</td>
                   <td>{formatAlarmName(alarm.name)}</td>
                   <td>{formatAlarmSeverity(alarm.severity)}</td>
                   <td
