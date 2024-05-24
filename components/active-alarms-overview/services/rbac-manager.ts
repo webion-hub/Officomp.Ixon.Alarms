@@ -1,4 +1,4 @@
-import type { ComponentContext } from '@ixon-cdk/types';
+import type { ComponentContext, MyUser } from '@ixon-cdk/types';
 import type { MyUserMembership } from '../types';
 import { ApiService } from './api.service';
 
@@ -9,23 +9,29 @@ export class RbacManager {
     this.apiService = new ApiService(context);
   }
 
-  public async getMyUserMemberships(): Promise<MyUserMembership[]> {
-    const myUser = await this.apiService.getMyUser();
+  public async getMyUserMemberships(myUser: MyUser): Promise<MyUserMembership[]> {
     const roles = await this.apiService.getRoles();
-    const userMemberships = await this.apiService.getUserMemberships();
+    const userMembershipsOfMyUser = await this.apiService.getUserMembershipsOfMyUser(myUser);
     const agentMemberships = await this.apiService.getAgentMemberships();
+    const assetMemberships = await this.apiService.getAssetMemberships();
     const groups = await this.apiService.getGroups();
-    const userMembershipsOfMyUser = userMemberships.filter(m => m?.user?.publicId === myUser?.publicId);
     const userMembershipsOfMyUserWithRelevantAgents = userMembershipsOfMyUser.map(membership => {
       const matchingAgents = agentMemberships
         ?.filter(agentM => agentM.group?.publicId === membership.group?.publicId)
         .map(agentM => agentM.agent ?? null)
         .filter(agent => !!agent);
-      if (!matchingAgents?.length) {
-        return membership;
-      }
+      const matchingAssets = assetMemberships
+        ?.filter(assetM => assetM.group?.publicId === membership.group?.publicId)
+        .map(assetM => assetM.asset ?? null)
+        .filter(asset => !!asset);
+
       const myUserMembership = membership as MyUserMembership;
-      myUserMembership.agents = matchingAgents;
+      if (matchingAgents?.length) {
+        myUserMembership.agents = matchingAgents;
+      }
+      if (matchingAssets?.length) {
+        myUserMembership.assets = matchingAssets;
+      }
       return myUserMembership;
     });
     const userMembershipsOfMyUserWithRelevantAgentsAndRelevantGroups = userMembershipsOfMyUserWithRelevantAgents.map(

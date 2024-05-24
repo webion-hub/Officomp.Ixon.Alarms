@@ -1,7 +1,7 @@
-import type { Agent as IAgent, AgentDataAlarm, AgentDataAlarmOccurrence } from '@ixon-cdk/types';
+import type { Agent, AgentDataAlarm, AgentDataAlarmOccurrence, Asset } from '@ixon-cdk/types';
 import type { Alarm } from '../types';
 
-export class Agent {
+export class AgentOrAsset {
   alarms: Alarm[];
   constructor(
     public publicId: string,
@@ -16,7 +16,7 @@ export class Agent {
           publicId: a.publicId,
           name: a.name ?? '',
           activeOccurrence: activeAlarmOccurrence,
-          agent: { name, publicId } as IAgent,
+          agentOrAsset: { name, publicId } as Agent | Asset,
           severity: a.severity ?? '',
           audience: a.audience?.publicId ?? '',
           source: a.source ?? null,
