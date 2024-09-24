@@ -7,5 +7,24 @@
     "minCols": 3,
     "minRows": 3
   },
-  "inputs": []
+  "inputs": [
+    {
+      "key": "refreshRate",
+      "label": "Default refresh rate",
+      "defaultValue": 0,
+      "type": "Selection",
+      "options": [
+        {
+          "value": 0,
+          "label": "Off",
+          "shortLabel": "Off"
+        },
+        {
+          "value": 30,
+          "label": "30s",
+          "shortLabel": "30 Seconds"
+        }
+      ]
+    }
+  ]
 }
