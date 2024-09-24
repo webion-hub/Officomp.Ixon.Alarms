@@ -3,10 +3,9 @@
   import { DateTime } from 'luxon';
   import type { ComponentContext, MyUser, ResourceDataClient } from '@ixon-cdk/types';
   import { AlarmsManager } from './services/alarms-manager';
-  import type { Alarm } from './types';
-  import { result } from 'lodash';
+  import type { Alarm, Input } from './types';
 
-  export let context: ComponentContext;
+  export let context: ComponentContext<Input>;
 
   let alarmsManager: AlarmsManager;
   let alarms: Alarm[];
@@ -40,7 +39,7 @@
         })
     : alarms?.filter(alarm => alarm.source);
 
-  onMount(async () => {
+  onMount(() => {
     alarmsManager = new AlarmsManager(context);
     client = context.createResourceDataClient();
     translations = context.translate(
@@ -63,6 +62,9 @@
         getCurrentActiveAlarms();
       },
     );
+    if (!!context.inputs.refreshRate) {
+      toggleAutoRefresh();
+    }
     return () => client.destroy();
   });
 
@@ -116,7 +118,7 @@
   }
 
   async function getCurrentActiveAlarms(): Promise<void> {
-    if(!!myUser) {
+    if(myUser) {
       loading = true;
       alarms = (await alarmsManager.getActiveAlarms(myUser)).sort((a, b) => {
         const delta = _getSortingWeight(b) - _getSortingWeight(a);
@@ -185,6 +187,7 @@
               ? 'auto-refresh ripple active'
               : 'auto-refresh ripple'}
             on:click={() => toggleAutoRefresh()}
+            data-testid="active-alarms-overview-refresh-toggle"
           >
             30s
           </button>

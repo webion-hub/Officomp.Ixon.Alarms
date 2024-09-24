@@ -16,3 +16,7 @@ export interface MyUserMembership extends UserMembership {
   group: Group;
   role: Role;
 }
+
+export interface Input {
+  refreshRate: number;
+}
