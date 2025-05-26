@@ -1,14 +1,21 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { DateTime } from 'luxon';
-  import type { ComponentContext, MyUser, ResourceDataClient } from '@ixon-cdk/types';
-  import { AlarmsManager } from './services/alarms-manager';
-  import type { Alarm, Input } from './types';
+  import { onMount } from "svelte";
+  import { DateTime } from "luxon";
+  import type {
+    AgentDataAlarmOccurrence,
+    ComponentContext,
+    MyUser,
+    ResourceDataClient,
+  } from "@ixon-cdk/types";
+  import { AlarmsManager } from "./services/alarms-manager";
+  import type { Alarm, Input } from "./types";
+  import { get } from "lodash";
 
   export let context: ComponentContext<Input>;
 
   let alarmsManager: AlarmsManager;
   let alarms: Alarm[];
+  let aknowleddgedAlarms: AgentDataAlarmOccurrence;
   let client: ResourceDataClient;
   let loading = true;
   let myUser: MyUser | null;
@@ -17,51 +24,91 @@
   let doAutoRefresh = false;
   let autoRefreshInterval: number | undefined;
   let translations: Record<string, string>;
-  let search = '';
+  let search = "";
+
+  const red = "#FED7D7";
+  const yellow = "#FEFCBF";
+  const green = "#C6F6D5";
+
+  $: alarms = alarms
+    ?.map((alarm) => {
+      alarm.backgroundColor = getBackgroundColor(alarm.severity, alarm.checked);
+      return alarm;
+    })
+    ?.sort((a, b) => {
+      let colorDifference =
+        getColorPriority(a.backgroundColor) -
+        getColorPriority(b.backgroundColor);
+      return colorDifference;
+    });
 
   $: isNarrow = tableWidth < 320;
 
   $: visibleAlarms = search
     ? alarms
-        ?.filter(alarm => alarm.source)
-        .filter(alarm => {
+        ?.filter((alarm) => alarm.source)
+        .filter((alarm) => {
           const activeOcc = alarm.activeOccurrence;
           const activeSince = activeOcc?.occurredOn
             ? formatDateTime(activeOcc.occurredOn)
             : undefined;
-          const alarmData = [alarm.agentOrAsset.name, alarm.name, alarm.severity];
+          const alarmData = [
+            alarm.agentOrAsset.name,
+            alarm.name,
+            alarm.severity,
+          ];
           if (activeSince) {
             alarmData.push(activeSince);
           }
-          return alarmData.find(x =>
-            x?.toLowerCase().includes(search.toLowerCase()),
+          return alarmData.find((x) =>
+            x?.toLowerCase().includes(search.toLowerCase())
           );
         })
-    : alarms?.filter(alarm => alarm.source);
+    : alarms?.filter((alarm) => alarm.source);
+
+  function getBackgroundColor(severity: string, checked: boolean) {
+    if (checked) {
+      if (severity === "high") return yellow;
+      if (severity === "medium") return green;
+      return green;
+    } else {
+      if (severity === "high") return red;
+      if (severity === "medium") return yellow;
+      return green;
+    }
+  }
+
+  function getColorPriority(bgColor?: string) {
+    if (bgColor === red) return 1;
+    if (bgColor === yellow) return 2;
+    return 3;
+  }
+
+  function updateAlarms(alarm: Alarm) {
+    alarm.checked = !alarm.checked;
+    alarms = [...alarms];
+  }
 
   onMount(() => {
     alarmsManager = new AlarmsManager(context);
     client = context.createResourceDataClient();
     translations = context.translate(
       [
-        '__TEXT__.NO_MATCHING_RESULTS',
-        'ACTIVE_ALARMS',
-        'ACTIVE_SINCE',
-        'ALARM',
-        'DEVICE',
-        'SEARCH',
-        'SEVERITY',
+        "__TEXT__.NO_MATCHING_RESULTS",
+        "ACTIVE_ALARMS",
+        "ACTIVE_SINCE",
+        "ALARM",
+        "DEVICE",
+        "SEARCH",
+        "SEVERITY",
       ],
       undefined,
-      { source: 'global' },
+      { source: "global" }
     );
-    client.query(
-      { selector: 'MyUser', fields: ['publicId'] },
-      ([result]) => {
-        myUser = result.data;
-        getCurrentActiveAlarms();
-      },
-    );
+    client.query({ selector: "MyUser", fields: ["publicId"] }, ([result]) => {
+      myUser = result.data;
+      getCurrentActiveAlarms();
+    });
     if (!!context.inputs.refreshRate) {
       toggleAutoRefresh();
     }
@@ -85,10 +132,10 @@
   }
 
   function formatAlarmName(name: string): string {
-    const ns = '__TRANSLATION__.';
+    const ns = "__TRANSLATION__.";
     return name.startsWith(ns)
       ? context.translate(name.slice(ns.length), undefined, {
-          source: 'custom',
+          source: "custom",
         })
       : name;
   }
@@ -97,7 +144,7 @@
     return context.translate(
       `__SYSTEM_LABEL__.ALARM_${severity.toUpperCase()}`,
       undefined,
-      { source: 'global' },
+      { source: "global" }
     );
   }
 
@@ -118,7 +165,7 @@
   }
 
   async function getCurrentActiveAlarms(): Promise<void> {
-    if(myUser) {
+    if (myUser) {
       loading = true;
       alarms = (await alarmsManager.getActiveAlarms(myUser)).sort((a, b) => {
         const delta = _getSortingWeight(b) - _getSortingWeight(a);
@@ -129,7 +176,7 @@
   }
 
   function _getSortingWeight(alarm: Alarm): number {
-    return ['low', 'medium', 'high'].indexOf(alarm.severity) + 1;
+    return ["low", "medium", "high"].indexOf(alarm.severity) + 1;
   }
 </script>
 
@@ -150,14 +197,14 @@
     <div class="card-header with-actions">
       <h3 class="card-title" data-testid="active-alarms-overview-card-title">
         <!-- TODO(remove-translation-fallback) -->
-        {translations.ACTIVE_ALARMS === 'ACTIVE_ALARMS'
-          ? 'Active alarms'
+        {translations.ACTIVE_ALARMS === "ACTIVE_ALARMS"
+          ? "Active alarms"
           : translations.ACTIVE_ALARMS}
       </h3>
       <div class="actions-top">
         <div
           class="search-input-container"
-          style={isNarrow ? 'width: 100px' : ''}
+          style={isNarrow ? "width: 100px" : ""}
         >
           <div class="search-input-prefix">
             <svg width="24" height="24" viewBox="0 0 24 24">
@@ -171,7 +218,7 @@
             class="search-input"
             placeholder={translations?.SEARCH}
             bind:value={search}
-            style={isNarrow ? 'display: flex' : ''}
+            style={isNarrow ? "display: flex" : ""}
           />
         </div>
         <div class="refresh-container">
@@ -184,8 +231,8 @@
           </button>
           <button
             class={doAutoRefresh
-              ? 'auto-refresh ripple active'
-              : 'auto-refresh ripple'}
+              ? "auto-refresh ripple active"
+              : "auto-refresh ripple"}
             on:click={() => toggleAutoRefresh()}
             data-testid="active-alarms-overview-refresh-toggle"
           >
@@ -210,22 +257,25 @@
                 <th>{translations.DEVICE}</th>
                 <!-- TODO(remove-translation-fallback) -->
                 <th
-                  >{translations.ALARM === 'ALARM'
-                    ? 'Alarm'
+                  >{translations.ALARM === "ALARM"
+                    ? "Alarm"
                     : translations.ALARM}</th
                 >
                 <th>{translations.SEVERITY}</th>
                 <!-- TODO(remove-translation-fallback) -->
                 <th
-                  >{translations.ACTIVE_SINCE === 'ACTIVE_SINCE'
-                    ? 'Active since'
+                  >{translations.ACTIVE_SINCE === "ACTIVE_SINCE"
+                    ? "Active since"
                     : translations.ACTIVE_SINCE}</th
                 >
+                <th>Accettato da</th>
+                <th>Commento</th>
               </tr>
             </thead>
             <tbody>
-              {#each visibleAlarms || [] as alarm}
+              {#each visibleAlarms || [] as alarm (alarm.publicId)}
                 <tr
+                  style="background-color: {alarm.backgroundColor};"
                   data-testid="active-alarms-overview-table-row"
                   on:click={() => goToAgent(alarm.agentOrAsset.publicId)}
                 >
@@ -235,8 +285,19 @@
                   <td
                     >{alarm.activeOccurrence?.occurredOn
                       ? formatDateTime(alarm.activeOccurrence.occurredOn)
-                      : ''}</td
+                      : ""}</td
                   >
+                  <td
+                    >{alarm.activeOccurrence?.acknowledgedBy?.reference
+                      ?.name}</td
+                  >
+                  <td>{alarm.activeOccurrence?.comment}</td>
+                  <td>
+                    <input
+                      type="checkbox"
+                      on:click={() => updateAlarms(alarm)}
+                    />
+                  </td>
                 </tr>
               {/each}
             </tbody>
@@ -244,7 +305,7 @@
         </div>
       {:else}
         <div class="no-search-results">
-          {translations['__TEXT__.NO_MATCHING_RESULTS']}
+          {translations["__TEXT__.NO_MATCHING_RESULTS"]}
         </div>
       {/if}
     </div>
@@ -252,12 +313,12 @@
 </div>
 
 <style lang="scss">
-  @import './styles/card';
-  @import './styles/spinner';
-  @import './styles/table';
-  @import './styles/refresh';
-  @import './styles/ripple';
-  @import './styles/search-input';
+  @import "./styles/card";
+  @import "./styles/spinner";
+  @import "./styles/table";
+  @import "./styles/refresh";
+  @import "./styles/ripple";
+  @import "./styles/search-input";
 
   .card-header {
     margin-bottom: 8px;
