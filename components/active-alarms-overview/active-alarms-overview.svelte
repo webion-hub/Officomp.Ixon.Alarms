@@ -32,7 +32,10 @@
 
   $: alarms = alarms
     ?.map((alarm) => {
-      alarm.backgroundColor = getBackgroundColor(alarm.severity, alarm.checked);
+      alarm.backgroundColor = getBackgroundColor(
+        alarm.severity,
+        alarm.activeOccurrence?.acknowledged ?? false
+      );
       return alarm;
     })
     ?.sort((a, b) => {
@@ -84,9 +87,14 @@
     return 3;
   }
 
-  function updateAlarms(alarm: Alarm) {
-    alarm.checked = !alarm.checked;
-    alarms = [...alarms];
+  async function updateAlarms(alarm: Alarm) {
+    await alarmsManager.apiService.acknowledgeAlarmOccurrence(
+      alarm.agentOrAsset.publicId,
+      alarm.activeOccurrence?.publicId ?? "",
+      !alarm.activeOccurrence?.acknowledged
+    );
+
+    await getCurrentActiveAlarms();
   }
 
   onMount(() => {
@@ -177,6 +185,36 @@
 
   function _getSortingWeight(alarm: Alarm): number {
     return ["low", "medium", "high"].indexOf(alarm.severity) + 1;
+  }
+
+  function handleClickComment(alarm: Alarm) {
+    context
+      .openFormDialog({
+        title: "Inserisci un commento",
+        inputs: [
+          {
+            key: "body",
+            type: "Text",
+            label: "Commento",
+            required: false,
+            translate: false,
+          },
+        ],
+        submitButtonText: "applica commento",
+        cancelButtonText: "annulla",
+        discardChangesPrompt: true,
+      })
+      .then(async (result) => {
+        if (result) {
+          await alarmsManager.apiService.setAlarmOccurenceComment(
+            alarm.agentOrAsset.publicId,
+            alarm.activeOccurrence?.publicId ?? "",
+            result.value.body as string
+          );
+
+          await getCurrentActiveAlarms();
+        }
+      });
   }
 </script>
 
@@ -288,15 +326,32 @@
                       : ""}</td
                   >
                   <td
-                    >{alarm.activeOccurrence?.acknowledgedBy?.reference
-                      ?.name}</td
+                    >{alarm.activeOccurrence?.acknowledgedBy?.reference?.name ??
+                      ""}</td
                   >
-                  <td>{alarm.activeOccurrence?.comment}</td>
+                  <td>{alarm.activeOccurrence?.comment ?? ""}</td>
                   <td>
                     <input
                       type="checkbox"
+                      checked={alarm.activeOccurrence?.acknowledged}
                       on:click={() => updateAlarms(alarm)}
                     />
+                  </td>
+                  <td>
+                    <template>
+                      <svg
+                        on:click={() => handleClickComment(alarm)}
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          fill="currentColor"
+                          d="M11 14h2v-3h3V9h-3V6h-2v3H8v2h3zm-9 8V4q0-.825.588-1.412T4 2h16q.825 0 1.413.588T22 4v12q0 .825-.587 1.413T20 18H6z"
+                        />
+                      </svg>
+                    </template>
                   </td>
                 </tr>
               {/each}

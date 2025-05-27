@@ -28,7 +28,6 @@ export class AgentOrAsset {
           severity: a.severity ?? "",
           audience: a.audience?.publicId ?? "",
           source: a.source ?? null,
-          checked: false,
         };
       }) ?? [];
   }

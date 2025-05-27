@@ -16,7 +16,6 @@ export interface Alarm {
   severity: string;
   source: ResLink | null;
   audience: string;
-  checked: boolean;
   backgroundColor?: string;
 }
 
