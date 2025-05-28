@@ -1,4 +1,12 @@
-import type { Agent, AgentDataAlarmOccurrence, Asset, Group, ResLink, Role, UserMembership } from '@ixon-cdk/types';
+import type {
+  Agent,
+  AgentDataAlarmOccurrence,
+  Asset,
+  Group,
+  ResLink,
+  Role,
+  UserMembership,
+} from "@ixon-cdk/types";
 
 export interface Alarm {
   publicId: string;
@@ -8,6 +16,7 @@ export interface Alarm {
   severity: string;
   source: ResLink | null;
   audience: string;
+  backgroundColor?: string;
 }
 
 export interface MyUserMembership extends UserMembership {
