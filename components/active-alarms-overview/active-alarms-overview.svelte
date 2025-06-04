@@ -198,6 +198,7 @@
             label: "Commento",
             required: false,
             translate: false,
+            value: { body: alarm.activeOccurrence?.comment ?? "" },
           },
         ],
         submitButtonText: "applica commento",
