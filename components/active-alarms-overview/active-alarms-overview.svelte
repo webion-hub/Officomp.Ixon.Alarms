@@ -191,6 +191,7 @@
     context
       .openFormDialog({
         title: "Inserisci un commento",
+        message: alarm.activeOccurrence?.comment ?? "",
         inputs: [
           {
             key: "body",
