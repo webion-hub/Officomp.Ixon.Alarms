@@ -1,6 +1,6 @@
 {
   "main": "app-active-alarms-overview.min.js",
-  "version": "7",
+  "version": "8",
   "sheetSettings": {
     "defaultCols": 9,
     "defaultRows": 6,
