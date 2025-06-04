@@ -334,7 +334,9 @@
                     <input
                       type="checkbox"
                       checked={alarm.activeOccurrence?.acknowledged}
-                      on:click|self={() => updateAlarms(alarm)}
+                      on:click|stopPropagation|self={(e) => {
+                        return updateAlarms(alarm)
+                      }}
                     />
                   </td>
                   <td>
