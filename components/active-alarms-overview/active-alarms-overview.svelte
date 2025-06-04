@@ -198,12 +198,14 @@
             label: "Commento",
             required: false,
             translate: false,
-            value: alarm.activeOccurrence?.comment ?? "",
           },
         ],
         submitButtonText: "applica commento",
         cancelButtonText: "annulla",
         discardChangesPrompt: true,
+        initialValue: {
+          body: alarm.activeOccurrence?.comment ?? "",
+        },
       })
       .then(async (result) => {
         if (result) {
