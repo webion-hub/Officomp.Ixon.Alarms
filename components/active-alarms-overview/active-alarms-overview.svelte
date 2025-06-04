@@ -9,7 +9,7 @@
   } from "@ixon-cdk/types";
   import { AlarmsManager } from "./services/alarms-manager";
   import type { Alarm, Input } from "./types";
-  import { get } from "lodash";
+  import { get, values } from "lodash";
 
   export let context: ComponentContext<Input>;
 
@@ -191,7 +191,6 @@
     context
       .openFormDialog({
         title: "Inserisci un commento",
-        message: alarm.activeOccurrence?.comment ?? "",
         inputs: [
           {
             key: "body",
@@ -199,6 +198,7 @@
             label: "Commento",
             required: false,
             translate: false,
+            value: alarm.activeOccurrence?.comment ?? "",
           },
         ],
         submitButtonText: "applica commento",
