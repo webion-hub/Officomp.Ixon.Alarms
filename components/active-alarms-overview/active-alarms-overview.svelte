@@ -334,7 +334,7 @@
                     <input
                       type="checkbox"
                       checked={alarm.activeOccurrence?.acknowledged}
-                      on:click={() => updateAlarms(alarm)}
+                      on:click|self={() => updateAlarms(alarm)}
                     />
                   </td>
                   <td>
