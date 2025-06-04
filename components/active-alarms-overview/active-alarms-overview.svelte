@@ -334,15 +334,15 @@
                     <input
                       type="checkbox"
                       checked={alarm.activeOccurrence?.acknowledged}
-                      on:click|stopPropagation|self={(e) => {
-                        return updateAlarms(alarm)
-                      }}
+                      on:click|stopPropagation|self={() => updateAlarms(alarm)}
+                      hidden={alarm.severity === "high"}
                     />
                   </td>
                   <td>
                     <template>
                       <svg
-                        on:click={() => handleClickComment(alarm)}
+                        on:click|stopPropagation|self={() =>
+                          handleClickComment(alarm)}
                         xmlns="http://www.w3.org/2000/svg"
                         width="24"
                         height="24"
