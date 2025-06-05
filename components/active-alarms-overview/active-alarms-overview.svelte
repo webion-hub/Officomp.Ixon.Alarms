@@ -200,6 +200,7 @@
             translate: false,
             value: { body: alarm.activeOccurrence?.comment ?? "" },
           },
+          values,
         ],
         submitButtonText: "applica commento",
         cancelButtonText: "annulla",
@@ -319,9 +320,13 @@
                 <tr
                   style="background-color: {alarm.backgroundColor};"
                   data-testid="active-alarms-overview-table-row"
-                  on:click={() => goToAgent(alarm.agentOrAsset.publicId)}
                 >
-                  <td>{alarm.agentOrAsset.name}</td>
+                  <td
+                    class="alarmName"
+                    on:click|stopPropagation|self={() =>
+                      goToAgent(alarm.agentOrAsset.publicId)}
+                    >{alarm.agentOrAsset.name}</td
+                  >
                   <td>{formatAlarmName(alarm.name)}</td>
                   <td>{formatAlarmSeverity(alarm.severity)}</td>
                   <td
@@ -344,19 +349,23 @@
                   </td>
                   <td>
                     <template>
-                      <svg
+                      <button
+                        class="svg-button"
                         on:click|stopPropagation|self={() =>
                           handleClickComment(alarm)}
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
                       >
-                        <path
-                          fill="currentColor"
-                          d="M11 14h2v-3h3V9h-3V6h-2v3H8v2h3zm-9 8V4q0-.825.588-1.412T4 2h16q.825 0 1.413.588T22 4v12q0 .825-.587 1.413T20 18H6z"
-                        />
-                      </svg>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            fill="currentColor"
+                            d="M11 14h2v-3h3V9h-3V6h-2v3H8v2h3zm-9 8V4q0-.825.588-1.412T4 2h16q.825 0 1.413.588T22 4v12q0 .825-.587 1.413T20 18H6z"
+                          />
+                        </svg>
+                      </button>
                     </template>
                   </td>
                 </tr>
@@ -459,5 +468,20 @@
   .no-search-results {
     font-size: 14px;
     margin-bottom: 16px;
+  }
+
+  .alarmName:hover {
+    text-decoration: underline;
+  }
+
+  .svg-button {
+    background: none;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  svg {
+    pointer-events: none;
   }
 </style>
