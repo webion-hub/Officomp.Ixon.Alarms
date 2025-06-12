@@ -9,7 +9,6 @@
   } from "@ixon-cdk/types";
   import { AlarmsManager } from "./services/alarms-manager";
   import type { Alarm, Input } from "./types";
-  import { get, values } from "lodash";
 
   export let context: ComponentContext<Input>;
 
@@ -25,6 +24,7 @@
   let autoRefreshInterval: number | undefined;
   let translations: Record<string, string>;
   let search = "";
+  let namesAcknowledgedBy: string;
 
   const red = "#FED7D7";
   const yellow = "#FEFCBF";
@@ -69,6 +69,15 @@
         })
     : alarms?.filter((alarm) => alarm.source);
 
+  $: alarmsAcknowledged = alarms
+    ?.filter((alarm) => alarm.activeOccurrence?.acknowledged)
+    .map(async (alarm) => {
+      const name = await alarmsManager.apiService.getNameOfAcknowledgeBy(
+        alarm.activeOccurrence?.acknowledgedBy?.publicId ?? ""
+      );
+      return { name: name, alarmId: alarm.publicId };
+    });
+
   function getBackgroundColor(severity: string, checked: boolean) {
     if (checked) {
       if (severity === "high") return yellow;
@@ -95,6 +104,22 @@
     );
 
     await getCurrentActiveAlarms();
+    getName(alarm.activeOccurrence?.acknowledgedBy?.publicId ?? "")
+      .then((name) => {
+        namesAcknowledgedBy = name;
+      })
+      .catch((error) => {
+        console.error("Error fetching acknowledged by name:", error);
+      });
+  }
+
+  async function getName(publicId: string) {
+    await alarmsManager.apiService
+      .getNameOfAcknowledgeBy(publicId)
+      .then((name) => {
+        namesAcknowledgedBy = name;
+      });
+    return namesAcknowledgedBy;
   }
 
   onMount(() => {
@@ -197,6 +222,7 @@
             type: "Text",
             label: "Commento",
             required: false,
+            translate: false,
             value: { body: alarm.activeOccurrence?.comment ?? "" },
           },
         ],
@@ -332,10 +358,12 @@
                       ? formatDateTime(alarm.activeOccurrence.occurredOn)
                       : ""}</td
                   >
-                  <td
-                    >{alarm.activeOccurrence?.acknowledgedBy?.reference?.name ??
-                      ""}</td
-                  >
+                  <td>
+                    <!-- {getName(
+                      alarm.activeOccurrence?.acknowledgedBy?.publicId ?? ""
+                    )} -->
+                    {namesAcknowledgedBy ?? ""}
+                  </td>
                   <td>{alarm.activeOccurrence?.comment ?? ""}</td>
                   <td>
                     <input
