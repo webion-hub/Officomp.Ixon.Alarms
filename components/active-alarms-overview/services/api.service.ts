@@ -334,20 +334,23 @@ export class ApiService {
     return response.data?.memberships ?? ([] as UserMembership[]);
   }
 
-  public async getNameOfAcknowledgeBy(publicId: string) {
+  public async getNameOfAcknowledgeBy(publicId: string) : Promise<string | undefined> {
     const url = this.context.getApiUrl("User", {
       publicId: publicId,
       fields: "name",
     });
+
     const response: IxApiResponse<User> = await fetch(url, {
       headers: this.headers,
       method: "GET",
     })
-      .then((res) => res.json())
-      .catch((error) => {
-        console.error("Error:", error);
-      });
-    return response.data?.name ?? "";
+    .then((res) => res.json())
+    .catch((error) => {
+      console.error("Error:", error);
+      return undefined;
+    });
+
+    return response.data?.name;
   }
 
   public async acknowledgeAlarmOccurrence(

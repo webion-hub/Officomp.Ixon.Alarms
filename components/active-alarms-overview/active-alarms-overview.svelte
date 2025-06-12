@@ -2,7 +2,6 @@
   import { onMount } from "svelte";
   import { DateTime } from "luxon";
   import type {
-    AgentDataAlarmOccurrence,
     ComponentContext,
     MyUser,
     ResourceDataClient,
@@ -10,11 +9,14 @@
   import { AlarmsManager } from "./services/alarms-manager";
   import type { Alarm, Input } from "./types";
 
+  type MyAlarm = Alarm & {
+    acknowledgedByName?: string
+  };
+
   export let context: ComponentContext<Input>;
 
   let alarmsManager: AlarmsManager;
-  let alarms: Alarm[];
-  let aknowleddgedAlarms: AgentDataAlarmOccurrence;
+  let alarms: MyAlarm[];
   let client: ResourceDataClient;
   let loading = true;
   let myUser: MyUser | null;
@@ -24,7 +26,6 @@
   let autoRefreshInterval: number | undefined;
   let translations: Record<string, string>;
   let search = "";
-  let namesAcknowledgedBy: string;
 
   const red = "#FED7D7";
   const yellow = "#FEFCBF";
@@ -69,15 +70,6 @@
         })
     : alarms?.filter((alarm) => alarm.source);
 
-  $: alarmsAcknowledged = alarms
-    ?.filter((alarm) => alarm.activeOccurrence?.acknowledged)
-    .map(async (alarm) => {
-      const name = await alarmsManager.apiService.getNameOfAcknowledgeBy(
-        alarm.activeOccurrence?.acknowledgedBy?.publicId ?? ""
-      );
-      return { name: name, alarmId: alarm.publicId };
-    });
-
   function getBackgroundColor(severity: string, checked: boolean) {
     if (checked) {
       if (severity === "high") return yellow;
@@ -104,22 +96,6 @@
     );
 
     await getCurrentActiveAlarms();
-    getName(alarm.activeOccurrence?.acknowledgedBy?.publicId ?? "")
-      .then((name) => {
-        namesAcknowledgedBy = name;
-      })
-      .catch((error) => {
-        console.error("Error fetching acknowledged by name:", error);
-      });
-  }
-
-  async function getName(publicId: string) {
-    await alarmsManager.apiService
-      .getNameOfAcknowledgeBy(publicId)
-      .then((name) => {
-        namesAcknowledgedBy = name;
-      });
-    return namesAcknowledgedBy;
   }
 
   onMount(() => {
@@ -204,6 +180,14 @@
         const delta = _getSortingWeight(b) - _getSortingWeight(a);
         return delta === 0 ? a.name.localeCompare(b.name) : delta;
       });
+
+      for(const alarm of alarms.filter((alarm) => alarm.activeOccurrence?.acknowledgedBy?.publicId))
+      {
+        const publicId = alarm.activeOccurrence?.acknowledgedBy?.publicId!;
+        var name = await alarmsManager.apiService.getNameOfAcknowledgeBy(publicId) ?? "";
+        alarm.acknowledgedByName = name;
+      }
+
       loading = false;
     }
   }
@@ -362,7 +346,7 @@
                     <!-- {getName(
                       alarm.activeOccurrence?.acknowledgedBy?.publicId ?? ""
                     )} -->
-                    {namesAcknowledgedBy ?? ""}
+                    {alarm.acknowledgedByName ?? ""}
                   </td>
                   <td>{alarm.activeOccurrence?.comment ?? ""}</td>
                   <td>
