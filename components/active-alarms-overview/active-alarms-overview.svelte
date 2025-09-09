@@ -2,20 +2,21 @@
   import { onMount } from "svelte";
   import { DateTime } from "luxon";
   import type {
-    AgentDataAlarmOccurrence,
     ComponentContext,
     MyUser,
     ResourceDataClient,
   } from "@ixon-cdk/types";
   import { AlarmsManager } from "./services/alarms-manager";
   import type { Alarm, Input } from "./types";
-  import { get, values } from "lodash";
+
+  type MyAlarm = Alarm & {
+    acknowledgedByName?: string
+  };
 
   export let context: ComponentContext<Input>;
 
   let alarmsManager: AlarmsManager;
-  let alarms: Alarm[];
-  let aknowleddgedAlarms: AgentDataAlarmOccurrence;
+  let alarms: MyAlarm[];
   let client: ResourceDataClient;
   let loading = true;
   let myUser: MyUser | null;
@@ -179,6 +180,14 @@
         const delta = _getSortingWeight(b) - _getSortingWeight(a);
         return delta === 0 ? a.name.localeCompare(b.name) : delta;
       });
+
+      for(const alarm of alarms.filter((alarm) => alarm.activeOccurrence?.acknowledgedBy?.publicId))
+      {
+        const publicId = alarm.activeOccurrence?.acknowledgedBy?.publicId!;
+        var name = await alarmsManager.apiService.getNameOfAcknowledgeBy(publicId) ?? "";
+        alarm.acknowledgedByName = name;
+      }
+
       loading = false;
     }
   }
@@ -197,6 +206,7 @@
             type: "Text",
             label: "Commento",
             required: false,
+            translate: false,
             value: { body: alarm.activeOccurrence?.comment ?? "" },
           },
         ],
@@ -332,10 +342,12 @@
                       ? formatDateTime(alarm.activeOccurrence.occurredOn)
                       : ""}</td
                   >
-                  <td
-                    >{alarm.activeOccurrence?.acknowledgedBy?.reference?.name ??
-                      ""}</td
-                  >
+                  <td>
+                    <!-- {getName(
+                      alarm.activeOccurrence?.acknowledgedBy?.publicId ?? ""
+                    )} -->
+                    {alarm.acknowledgedByName ?? ""}
+                  </td>
                   <td>{alarm.activeOccurrence?.comment ?? ""}</td>
                   <td>
                     <input
